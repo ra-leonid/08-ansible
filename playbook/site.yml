@@ -1,0 +1,92 @@
+---
+- name: Install Clickhouse
+  hosts: clickhouse
+  handlers:
+    - name: Start clickhouse service
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: reloaded
+        enabled: true
+  tags:
+    - clickhouse
+  tasks:
+    - block:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/rpm/stable/{{ item }}-{{ clickhouse_version }}.noarch.rpm"
+            dest: "./{{ item }}-{{ clickhouse_version }}.rpm"
+            mode: 0755
+          with_items: "{{ clickhouse_packages }}"
+      rescue:
+        - name: Get clickhouse distrib
+          ansible.builtin.get_url:
+            url: "https://packages.clickhouse.com/rpm/stable/clickhouse-common-static-{{ clickhouse_version }}.x86_64.rpm"
+            dest: "./clickhouse-common-static-{{ clickhouse_version }}.rpm"
+            mode: 0755
+    - name: Install clickhouse packages
+      become: true
+      ansible.builtin.yum:
+        name:
+          - clickhouse-common-static-{{ clickhouse_version }}.rpm
+          - clickhouse-client-{{ clickhouse_version }}.rpm
+          - clickhouse-server-{{ clickhouse_version }}.rpm
+      notify: Start clickhouse service
+    - name: Flush handlers
+      ansible.builtin.meta: flush_handlers
+    - name: Start clickhouse service
+      become: true
+      ansible.builtin.service:
+        name: clickhouse-server
+        state: started
+        enabled: true
+    - name: Add the user 'logger'
+      become: true
+      ansible.builtin.user:
+        name: logger
+        password: logger
+    - name: Create database
+      ansible.builtin.command: "clickhouse-client -q 'create database logs;'"
+      register: create_db
+      failed_when: create_db.rc != 0 and create_db.rc !=82
+      changed_when: create_db.rc == 0
+    - name: Create table
+      ansible.builtin.command: "clickhouse-client -q 'create table logs.somelog ({{ file_log_structure }}) ENGINE = Log();'"
+      register: create_tbl
+      failed_when: create_tbl.rc != 0 and create_tbl.rc != 57
+      changed_when: create_tbl.rc == 0
+
+- name: Install Vector
+  hosts: vector
+  tags:
+    - vector
+  handlers:
+    - name: Start Vector service
+      become: true
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+        enabled: true
+  tasks:
+    - name: Get vector distrib
+      ansible.builtin.get_url:
+        url: "https://packages.timber.io/vector/{{ vector_version }}/{{ vector_package['deb'] }}"
+        dest: "./{{ vector_package['deb'] }}"
+        mode: 0755
+    - block:
+      - name: Install vector deb
+        when: ansible_pkg_mgr == "apt"
+        ansible.builtin.apt:
+          deb: "{{ vector_package['deb'] }}"
+      - name: Install vector rpm
+        when: ansible_pkg_mgr == "yum"
+        ansible.builtin.yum:
+          name: "{{ vector_package['rpm'] }}"
+      become: true
+      notify: Start vector service
+    - name: Install vector configuration
+      become: true
+      ansible.builtin.template:
+        src: vector.yaml.j2
+        dest: "/etc/vector/vector.yaml"
+      notify: Start Vector service

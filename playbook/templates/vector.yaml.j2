@@ -1,0 +1,23 @@
+---
+data_dir: /var/lib/vector
+sources:
+  sample_file:
+    type: file
+    ignore_older_secs: 600
+    include:
+      - /var/log/**/*.log
+    read_from: beginning
+sinks:
+  to_clickhouse:
+    type: clickhouse
+    inputs:
+      - sample_file
+    endpoint: http://51.250.1.97:8123
+    database: logs
+    table: somelog
+    auth:
+      user: logger
+      password: logger
+      strategy: basic
+    skip_unknown_fields: true
+    compression: gzip
