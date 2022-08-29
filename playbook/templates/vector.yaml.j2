@@ -12,7 +12,7 @@ sinks:
     type: clickhouse
     inputs:
       - sample_file
-    endpoint: http://51.250.1.97:8123
+    endpoint: http://{{ hostvars['clickhouse-01'].ansible_host }}:8123
     database: logs
     table: somelog
     auth:

@@ -1,5 +1,5 @@
 ---
 vector_version: 0.23.3
 vector_package:
-  rpm: "vector-{{ vector_version }}-1.x86_64.rpm"
-  deb: "vector_{{ vector_version }}-1_amd64.deb"
+  yum: "vector-{{ vector_version }}-1.x86_64.rpm"
+  apt: "vector_{{ vector_version }}-1_amd64.deb"
