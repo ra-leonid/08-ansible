@@ -1,5 +1,5 @@
 ---
-vector_version: 0.23.3
-vector_package:
-  yum: "vector-{{ vector_version }}-1.x86_64.rpm"
-  apt: "vector_{{ vector_version }}-1_amd64.deb"
+vector_version: 0.24.0
+clickhouse_host_name: clickhouse-01
+clickhouse_user: logger
+clickhouse_password: logger
